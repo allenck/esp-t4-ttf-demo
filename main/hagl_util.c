@@ -11,7 +11,7 @@
 static const char *TAG = "hagl_util";
 
 void hagl_write_pixels(hagl_driver_t *driver, color_t *pixels, size_t length) {
-	ESP_LOGI(TAG, "hagl_write_pixels l=%d", length);
+	//ESP_LOGI(TAG, "hagl_write_pixels l=%d", length);
 #if 0
 	st7789_wait_until_queue_empty(driver);
 
@@ -52,7 +52,7 @@ void hagl_randomize_dither_table() {
 
 
 void hagl_draw_gray2_bitmap(uint8_t *src_buf, color_t *target_buf, uint8_t r, uint8_t g, uint8_t b, int x, int y, int src_w, int src_h, int target_w, int target_h) {
-	ESP_LOGI(TAG, "start hagl_draw_gray2_bitmap");
+	//ESP_LOGI(TAG, "start hagl_draw_gray2_bitmap");
 	if (x >= target_w || y >= target_h || x + src_w <= 0 || y + src_h <= 0) {
 		return;
 	}

@@ -88,7 +88,25 @@ void flush_task(void *params)
     vTaskDelete(NULL);
 }
 
-#if 1
+/*
+ * Software vsync. Waits for flush to start. Needed to avoid
+ * tearing when using double buffering, NOP otherwise. This
+ * could be handler with IRQ's if the display supports it.
+ */
+static void wait_for_vsync()
+{
+#ifdef CONFIG_HAGL_HAL_USE_DOUBLE_BUFFERING
+    xEventGroupWaitBits(
+        event,
+        FLUSH_STARTED,
+        pdTRUE,
+        pdFALSE,
+        10000 / portTICK_RATE_MS
+    );
+    ets_delay_us(25000);
+#endif /* CONFIG_HAGL_HAL_USE_DOUBLE_BUFFERING */
+}
+
 static void render_text(const char *text, font_render_t *render, hagl_driver_t *driver, int src_x, int src_y, int y, uint8_t color_r, uint8_t color_g, uint8_t color_b) {
 	if (src_y - y >= BUFFER_SIZE || src_y + (int)render->max_pixel_height - y < 0) {
 		return;
@@ -107,7 +125,7 @@ static void render_text(const char *text, font_render_t *render, hagl_driver_t *
 #define GREEN_BACKGROUND_COLOR 80
 
 void gradient(hagl_driver_t *driver, uint16_t y, draw_event_param_t *param) {
-	ESP_LOGI(TAG, "start gradient");
+	//ESP_LOGI(TAG, "start gradient");
 	if (y >= DRAW_EVENT_CONTROL) {
 		if (y == DRAW_EVENT_START) {
 			ESP_ERROR_CHECK(font_render_init(&font_render, &font_face, 24, 16));
@@ -170,7 +188,7 @@ void fade_in_green(hagl_driver_t *driver, uint16_t y, draw_event_param_t *param)
 	if (y >= DRAW_EVENT_CONTROL) {
 		return;
 	}
-	ESP_LOGI(TAG, "start fade_in_green, y=%d", y);
+	//ESP_LOGI(TAG, "start fade_in_green, y=%d", y);
 	const int start_color = 0;
 	const int end_color = GREEN_BACKGROUND_COLOR;
 	const float transition_position = ((float)param->frame + 1.0) / (float)param->duration;
@@ -190,7 +208,7 @@ void fade_in_green(hagl_driver_t *driver, uint16_t y, draw_event_param_t *param)
 
 
 void green_background(hagl_driver_t *driver, uint16_t y, draw_event_param_t *param) {
-	ESP_LOGI(TAG, "start green_background");
+	//ESP_LOGI(TAG, "start green_background");
 	if (y >= DRAW_EVENT_CONTROL) {
 		return;
 	}
@@ -202,7 +220,7 @@ void green_background(hagl_driver_t *driver, uint16_t y, draw_event_param_t *par
 
 
 void black_background(hagl_driver_t *driver, uint16_t y, draw_event_param_t *param) {
-	ESP_LOGI(TAG, "start black_background");
+	//ESP_LOGI(TAG, "start black_background");
 	if (y >= DRAW_EVENT_CONTROL) {
 		return;
 	}
@@ -242,7 +260,7 @@ void lorem_ipsum(hagl_driver_t *driver, uint16_t y, draw_event_param_t *param) {
 
 
 void fade_in_a(hagl_driver_t *driver, uint16_t y, draw_event_param_t *param) {
-	ESP_LOGI(TAG, "start fade_in_a");
+	//ESP_LOGI(TAG, "start fade_in_a");
 	if (y >= DRAW_EVENT_CONTROL) {
 		if (y == DRAW_EVENT_START) {
 			ESP_ERROR_CHECK(font_render_init(&font_render, &font_face, 200, 1));
@@ -590,7 +608,6 @@ void complex_text_demo(hagl_driver_t *driver, uint16_t y, draw_event_param_t *pa
 		);
 	}
 }
-#endif
 
 void app_main(void)
 {
@@ -607,13 +624,18 @@ void app_main(void)
 			.buffer_size = BUFFER_SIZE * DISPLAY_WIDTH	// 2 buffers with 20 lines
 	};
 	if(bm)
+	{
 		ESP_LOGI(TAG, "hagl_init: w=%d, h=%d, d=%d, s=%d", bm->width, bm->height,bm->depth, bm->size);
+		display.buffer = (color_t*)bm->buffer;
+	}
 	else
+	{
 		ESP_LOGI(TAG, "hagl_init: null");
-    display.buffer = (color_t*)malloc(display.buffer_size * sizeof(color_t));
-    if (display.buffer == NULL) {
-		ESP_LOGE(TAG, "buffer not allocated");
-		return;
+		display.buffer = (color_t*)malloc(display.buffer_size * sizeof(color_t));
+		if (display.buffer == NULL) {
+			ESP_LOGE(TAG, "buffer not allocated");
+			return;
+		}
 	}
     display.buffer_a = display.buffer;
 	display.buffer_b = display.buffer;// + display.buffer_size;
@@ -706,7 +728,7 @@ void app_main(void)
 			.duration = 0,
 			.user_data = NULL,
 		};
-
+		wait_for_vsync();
 		ESP_LOGI(TAG, "animation_step");
 		while (animation_step->draw_elements) {
 			const draw_element_t *current_layer;
@@ -761,6 +783,7 @@ void app_main(void)
 
 				draw_state.frame++;
 				draw_state.total_frame++;
+				xEventGroupSetBits(event, RENDER_FINISHED);
 			}
 
 			// After draw calls
@@ -770,7 +793,7 @@ void app_main(void)
 				current_layer->callback(&display, DRAW_EVENT_END, &draw_state);
 				current_layer++;
 			}
-
+			;
 			animation_step++;
 		}
 
