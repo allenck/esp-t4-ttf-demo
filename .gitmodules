@@ -1,0 +1,6 @@
+[submodule "components/hagl"]
+	path = components/hagl
+	url = https://github.com/tuupola/hagl.git
+[submodule "components/font_render/freetype2"]
+	path = components/font_render/freetype2
+	url = git://git.sv.nongnu.org/freetype/freetype2.git
