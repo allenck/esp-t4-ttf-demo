@@ -9,6 +9,7 @@
 #include "freertos/task.h"
 #include <freertos/event_groups.h>
 #include "soc/cpu.h"
+#include "esp_task_wdt.h"
 
 #include "unicode.h"
 #include "font_render.h"
@@ -83,10 +84,12 @@ void flush_task(void *params)
             hagl_flush();
             fb_fps = fps();
         }
+        ESP_ERROR_CHECK(esp_task_wdt_reset());
     }
 
     vTaskDelete(NULL);
 }
+TaskHandle_t flush_task_handle = NULL;
 
 /*
  * Software vsync. Waits for flush to start. Needed to avoid
@@ -204,7 +207,8 @@ void fade_in_green(hagl_driver_t *driver, uint16_t y, draw_event_param_t *param)
 			cursor_y++;
 		}
 	}
-	ESP_LOGI(TAG, "end fade_in_green");}
+	//ESP_LOGI(TAG, "end fade_in_green");
+}
 
 
 void green_background(hagl_driver_t *driver, uint16_t y, draw_event_param_t *param) {
@@ -229,7 +233,7 @@ void black_background(hagl_driver_t *driver, uint16_t y, draw_event_param_t *par
 
 
 void draw_lorem_ipsum(hagl_driver_t *driver, uint16_t y, int y_shift) {
-	ESP_LOGI(TAG, "start draw_lorem_ipsum");
+	//ESP_LOGI(TAG, "start draw_lorem_ipsum");
 	const int line_height = 20;
 	render_text("Lorem ipsum dolor sit amet,", &font_render2, driver, 8, y_shift, y, 255, 255, 255);
 	render_text("consectetur adipiscing elit.", &font_render2, driver, 8, y_shift + line_height * 1, y, 255, 255, 255);
@@ -649,7 +653,8 @@ void app_main(void)
 	ESP_LOGI(TAG, "Heap after HAGL init: %d", esp_get_free_heap_size());
 
 #ifdef HAGL_HAL_USE_BUFFERING
-	xTaskCreatePinnedToCore(flush_task, "Flush", 4096, NULL, 1, NULL, 0);
+	xTaskCreatePinnedToCore(flush_task, "Flush", 4096, NULL, 1, &flush_task_handle, 1);
+	ESP_ERROR_CHECK(esp_task_wdt_add(flush_task_handle));
 #endif
 
 	while (1) {
@@ -767,7 +772,7 @@ void app_main(void)
 						hagl_swap_buffers(&display);
 					}
 					uint32_t ticks_after_frame = xthal_get_ccount();
-					printf("\rf: %08d, time: %.4f\n", (int)draw_state.total_frame, ((double)ticks_after_frame - (double)ticks_before_frame) / 240000.0);
+					//printf("\rf: %08d, time: %.4f\n", (int)draw_state.total_frame, ((double)ticks_after_frame - (double)ticks_before_frame) / 240000.0);
 				}
 				else {
 					vTaskDelay(1000 / 40 / portTICK_PERIOD_MS);
@@ -783,7 +788,9 @@ void app_main(void)
 
 				draw_state.frame++;
 				draw_state.total_frame++;
+				//ESP_ERROR_CHECK(esp_task_wdt_reset());
 				xEventGroupSetBits(event, RENDER_FINISHED);
+
 			}
 
 			// After draw calls
@@ -804,3 +811,5 @@ void app_main(void)
 	vTaskDelay(portMAX_DELAY);
 	vTaskDelete(NULL);
 }
+
+
