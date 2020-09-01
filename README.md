@@ -1,7 +1,7 @@
 ESP-T4-ttf-demo
 ===============
 
-This is a port of the [esp-st7789-demo](https://github.com/mireq/esp32-st7789-demo).iit uses the HAGL libries and FreeType to display TrueTypeFonts.
+This is a port of the [esp-st7789-demo](https://github.com/mireq/esp32-st7789-demo). it uses the HAGL libries and FreeType to display TrueTypeFonts on a TTGO T4 (ILI9341) oled display.
 
 
 
